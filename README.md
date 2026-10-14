@@ -21,7 +21,7 @@ A single-page app that applies a monthly momentum rotation to the 11 US equity s
 
 ## Data
 
-Dividend-adjusted month-end closes from Yahoo Finance, Oct 2024 to 6 Oct 2026, embedded in `index.html`. The page does not fetch live prices. To refresh, replace the `RAW` object in the script with newer closes.
+Dividend-adjusted month-end closes from Yahoo Finance, Oct 2024 to 13 Oct 2026, embedded in `index.html`. The page does not fetch live prices. To refresh, replace the `RAW` object in the script with newer closes.
 
 ## Run it
 
