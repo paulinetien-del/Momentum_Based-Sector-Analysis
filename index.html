@@ -1,390 +1,278 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Momentum Sector Rotation</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Monthly momentum rotation across the 11 US sector ETFs: rank, buy the top 3, avoid the bottom 3, backtest vs SPY.">
+<title>US Sector Momentum Rotator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
-  :root{
-    --navy:#101F45;--navy-2:#172a5c;--teal:#0F7A6C;--teal-soft:#E4F3EF;
-    --gold:#C8972E;--gold-soft:#FBF1DD;--buy:#1E8E5A;--buy-soft:#E5F6ED;
-    --avoid:#B23A2E;--avoid-soft:#FBEAE7;--hold:#8A8270;--hold-soft:#F1EFE9;
-    --paper:#FAF8F4;--ink:#1B1D29;--ink-soft:#5A5E70;--line:#E4E1D8;
-    --real:#0F7A6C;--real-soft:#E4F3EF;--sim:#9B6B1E;--sim-soft:#FBF1DD;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 60px;}
-  header{background:linear-gradient(135deg,var(--navy) 0%, var(--navy-2) 100%);padding:38px 0 30px;position:relative;overflow:hidden;}
-  header::after{content:"";position:absolute;right:-60px;top:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle, rgba(200,151,46,0.18), transparent 70%);}
-  .head-inner{max-width:1180px;margin:0 auto;padding:0 20px;position:relative;z-index:1;}
-  .eyebrow{color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 10px;}
-  h1{font-family:'Spectral',serif;color:#fff;font-size:40px;font-weight:700;margin:0 0 10px;letter-spacing:-0.01em;}
-  header p.sub{color:#C7CCE0;font-size:15.5px;max-width:660px;margin:0;line-height:1.5;}
-  .controls{margin-top:-26px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 28px -18px rgba(16,31,69,0.35);padding:20px 22px;display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;position:relative;z-index:2;}
-  .ctrl-group{display:flex;flex-direction:column;gap:8px;}
-  .ctrl-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);}
-  .pillrow{display:flex;gap:6px;flex-wrap:wrap;}
-  .pill{border:1px solid var(--line);background:#fff;color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;padding:9px 16px;border-radius:999px;cursor:pointer;transition:all .15s ease;}
-  .pill:hover{border-color:var(--navy);}
-  .pill.active{background:var(--navy);border-color:var(--navy);color:#fff;}
-  .pill.active.alt{background:var(--teal);border-color:var(--teal);}
-  .ctrl-note{font-size:12.5px;color:var(--ink-soft);max-width:260px;line-height:1.4;margin-left:auto;}
-  .data-badge{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;letter-spacing:.04em;}
-  .data-badge.real{background:var(--real-soft);color:var(--real);}
-  .data-badge.sim{background:var(--sim-soft);color:var(--sim);}
-  .data-badge .dotb{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;}
-  .grid{display:grid;grid-template-columns:1.62fr 1fr;gap:24px;margin-top:30px;}
-  @media (max-width:880px){ .grid{grid-template-columns:1fr;} }
-  .card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
-  .card-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-  .card-head h2{font-family:'Spectral',serif;font-size:18px;margin:0;font-weight:700;color:var(--navy);}
-  .card-head .meta-row{display:flex;align-items:center;gap:10px;}
-  .card-head span.meta{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
-  table{width:100%;border-collapse:collapse;}
-  thead th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);padding:10px 20px;border-bottom:1px solid var(--line);background:#FCFBF8;}
-  thead th.num{text-align:right;}
-  tbody td{padding:11px 20px;border-bottom:1px solid var(--line);font-size:14.5px;vertical-align:middle;}
-  tbody tr:last-child td{border-bottom:none;}
-  tbody tr:hover{background:#FCFBF7;}
-  tr.semis{background:#FBF7EC;}
-  tr.semis:hover{background:#F8F1E0;}
-  .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;color:#fff;background:var(--hold);}
-  tr.buy .rank-badge{background:var(--buy);}
-  tr.avoid .rank-badge{background:var(--avoid);}
-  .sector-name{font-weight:600;margin-left:10px;}
-  .sub-flag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;color:var(--sim);background:var(--sim-soft);padding:2px 6px;border-radius:5px;margin-left:8px;letter-spacing:.04em;}
-  .approx-flag{font-size:11px;color:var(--ink-soft);margin-left:5px;}
-  .ret-cell{text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;}
-  tr.buy .ret-cell{color:var(--buy);}
-  tr.avoid .ret-cell{color:var(--avoid);}
-  .bar-cell{position:relative;}
-  .bar-track{position:relative;height:8px;background:#EFEDE6;border-radius:5px;width:140px;overflow:hidden;}
-  .bar-fill{position:absolute;top:0;height:100%;border-radius:5px;}
-  tr.buy .bar-fill{background:var(--buy);}
-  tr.avoid .bar-fill{background:var(--avoid);}
-  tr.hold .bar-fill{background:var(--hold);}
-  .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.06em;padding:3px 9px;border-radius:5px;}
-  tr.buy .tag{background:var(--buy-soft);color:var(--buy);}
-  tr.avoid .tag{background:var(--avoid-soft);color:var(--avoid);}
-  tr.hold .tag{background:var(--hold-soft);color:var(--hold);}
-  .side-stack{display:flex;flex-direction:column;gap:18px;}
-  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;}
-  .panel h3{font-family:'Spectral',serif;color:var(--navy);font-size:16px;margin:0 0 12px;}
-  .panel.callout{background:#FBF7EC;border-color:#EBDBB0;}
-  .panel.callout h3{color:#7A5410;}
-  .panel.callout p{font-size:13px;line-height:1.55;color:#3a3320;margin:0 0 8px;}
-  .panel.callout p:last-child{margin-bottom:0;}
-  .panel.callout b{color:#1B1D29;}
-  ul.bullet{margin:0;padding:0;list-style:none;}
-  ul.bullet li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.45;margin-bottom:9px;color:#33364a;}
-  ul.bullet li:last-child{margin-bottom:0;}
-  .dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;}
-  .dot.good{background:var(--buy);}
-  .dot.bad{background:var(--avoid);}
-  .insight{margin-top:24px;background:var(--navy);color:#fff;border-radius:14px;padding:18px 22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
-  .insight .ilabel{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);flex-shrink:0;}
-  .insight p{margin:0;font-size:14.5px;line-height:1.5;color:#E7E9F2;}
-  .insight b{color:#fff;}
-  .source-note{margin-top:10px;font-size:11.5px;color:var(--ink-soft);text-align:right;padding:0 20px 14px;}
-  .disclaimer{margin-top:14px;font-size:12px;color:var(--ink-soft);text-align:center;line-height:1.5;}
-  .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:28px;}
-  @media (max-width:880px){ .steps{grid-template-columns:repeat(2,1fr);} }
-  .step{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 14px 16px;}
-  .step .num{font-family:'Spectral',serif;font-weight:700;font-size:22px;color:var(--gold);}
-  .step h4{margin:6px 0 4px;font-size:13.5px;color:var(--navy);}
-  .step p{margin:0;font-size:12px;color:var(--ink-soft);line-height:1.4;}
-  .section-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin:34px 0 0;}
+/* Layout: a trading-desk worksheet — control strip, verdict, ranking ledger, then evidence (backtest, heatmap). */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#14212b; --muted:#5b6b78; --line:#d9e0e6;
+  --accent:#1f5f8b; --up:#13814f; --down:#c2412f; --hold:#8a96a1; --spy:#8a6d1f; --ew:#7a5aa8;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161c; --surface:#16212a; --ink:#e4ebf0; --muted:#93a3b0; --line:#2a3945;
+  --accent:#6fb3e0; --up:#3fbf7f; --down:#ef7a66; --hold:#7d8b96; --spy:#d4b05a; --ew:#b394e0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161c; --surface:#16212a; --ink:#e4ebf0; --muted:#93a3b0; --line:#2a3945;
+  --accent:#6fb3e0; --up:#3fbf7f; --down:#ef7a66; --hold:#7d8b96; --spy:#d4b05a; --ew:#b394e0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:28px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.6rem,4vw,2.3rem);font-weight:700}
+h2{font-size:1.25rem;font-weight:700}
+.eyebrow{font:600 .72rem/1 var(--f-mono);text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+.sub{color:var(--muted);margin:.35rem 0 0;max-width:68ch}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+header{display:grid;gap:6px}
+
+.controls{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:end;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.ctl{display:grid;gap:6px}
+.ctl label,.ctl .lbl{font:600 .7rem/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:600 .85rem var(--f-mono);padding:7px 12px;border:0;background:var(--bg);color:var(--muted);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:10px;align-content:start;min-width:0}
+.box h3{margin:0;font:700 .78rem/1 var(--f-mono);text-transform:uppercase;letter-spacing:.1em}
+.box.buy h3{color:var(--up)} .box.avoid h3{color:var(--down)} .box.change h3{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;gap:8px;align-items:baseline;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.chip b{font-family:var(--f-mono);font-size:.9rem}
+.chip span{font-size:.85rem;color:var(--muted)}
+.chip.buy{border-color:color-mix(in oklab,var(--up) 45%,var(--line))}
+.chip.avoid{border-color:color-mix(in oklab,var(--down) 45%,var(--line))}
+.note{font-size:.88rem;color:var(--muted);margin:0}
+
+section{display:grid;gap:12px}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:600 .7rem/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface)}
+td:nth-child(2),th:nth-child(2){text-align:left}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-size:.9rem}
+.pos{color:var(--up)} .neg{color:var(--down)}
+.rank{font:700 1rem var(--f-mono);color:var(--muted)}
+.sector small{display:block;color:var(--muted);font-family:var(--f-mono);font-size:.75rem}
+.barcell{width:180px}
+.bar{position:relative;height:12px;background:color-mix(in oklab,var(--line) 50%,transparent);border-radius:2px}
+.bar i{position:absolute;top:0;bottom:0;border-radius:2px}
+.bar::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--muted)}
+.pill{display:inline-block;font:700 .72rem/1 var(--f-mono);letter-spacing:.06em;padding:5px 8px;border-radius:4px}
+.pill.BUY{background:color-mix(in oklab,var(--up) 18%,transparent);color:var(--up)}
+.pill.AVOID{background:color-mix(in oklab,var(--down) 18%,transparent);color:var(--down)}
+.pill.HOLD{background:color-mix(in oklab,var(--hold) 18%,transparent);color:var(--muted)}
+tr.BUY td:first-child{box-shadow:inset 3px 0 0 var(--up)}
+tr.AVOID td:first-child{box-shadow:inset 3px 0 0 var(--down)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat{background:var(--surface);padding:12px 14px;display:grid;gap:4px}
+.stat .k{font:600 .68rem/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.stat .v{font:600 1.05rem var(--f-mono)}
+.stat .v small{font-size:.75rem;color:var(--muted);font-weight:400}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted);padding:4px 4px 0}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;margin-right:6px;vertical-align:middle;background:var(--c)}
+
+.heat table{min-width:880px}
+.heat td,.heat th{padding:6px 6px;text-align:center;font-size:.78rem}
+.heat td:first-child,.heat th:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+.heat td.cell{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.heat td.top{outline:2px solid var(--up);outline-offset:-3px}
+.heat td.bot{outline:2px dashed var(--down);outline-offset:-3px}
+footer{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:grid;gap:6px}
+footer p{margin:0;max-width:80ch}
+@media (max-width:520px){.barcell{width:110px}}
 </style>
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
 
-<header>
-  <div class="head-inner">
-    <p class="eyebrow">Sector Rotation Toolkit</p>
-    <h1>Momentum-Based Sector Rotation</h1>
-    <p class="sub">Rank every sector by price momentum across the US and Bursa Malaysia — systematically overweight the leaders, cut the laggards, no forecasting required.</p>
-  </div>
-</header>
-
 <div class="wrap">
+  <header>
+    <div class="eyebrow">US equities · 11 GICS sectors · SPDR Select Sector ETFs</div>
+    <h1>Sector Momentum Rotator</h1>
+    <p class="sub">Rank every sector by its trailing return at month-end. Hold the strongest, sidestep the weakest, rebalance next month. Prices are dividend-adjusted closes, with data through <span id="asof" class="num"></span>.</p>
+  </header>
 
-  <div class="controls">
-    <div class="ctrl-group">
-      <span class="ctrl-label">Market</span>
-      <div class="pillrow" id="marketPills"></div>
-    </div>
-    <div class="ctrl-group">
-      <span class="ctrl-label">Lookback window</span>
-      <div class="pillrow" id="lookbackPills"></div>
-    </div>
-    <div class="ctrl-group">
-      <span class="ctrl-label">Buy tier size</span>
-      <div class="pillrow" id="tierPills"></div>
-    </div>
-    <div class="ctrl-note" id="ctrlNote"></div>
+  <div class="controls" role="group" aria-label="Strategy settings">
+    <div class="ctl"><label for="month">Signal month-end</label><select id="month"></select></div>
+    <div class="ctl"><span class="lbl" id="lbLbl">Lookback</span><div class="seg" id="lookback" aria-labelledby="lbLbl"></div></div>
+    <div class="ctl"><span class="lbl" id="nLbl">Basket size</span><div class="seg" id="basket" aria-labelledby="nLbl"></div></div>
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="card-head">
-        <h2 id="rankingTitle">Sector Ranking</h2>
-        <div class="meta-row">
-          <span class="meta" id="rankingMeta"></span>
-          <span class="data-badge" id="dataBadge"></span>
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:64px;">Rank</th>
-            <th>Sector</th>
-            <th>Momentum</th>
-            <th class="num">Return</th>
-            <th style="width:74px;">Signal</th>
-          </tr>
-        </thead>
-        <tbody id="rankBody"></tbody>
-      </table>
-      <p class="source-note" id="sourceNote"></p>
-    </div>
-
-    <div class="side-stack">
-      <div class="panel callout" id="chipCallout"></div>
-      <div class="panel">
-        <h3>Strengths</h3>
-        <ul class="bullet">
-          <li><span class="dot good"></span>No macro forecasting needed — price does the talking</li>
-          <li><span class="dot good"></span>Fully systematic, removes emotion from sector calls</li>
-          <li><span class="dot good"></span>Works across market cycles, not just bull runs</li>
-        </ul>
-      </div>
-      <div class="panel">
-        <h3>Limitations</h3>
-        <ul class="bullet">
-          <li><span class="dot bad"></span>Lags at turning points — momentum confirms after the fact</li>
-          <li><span class="dot bad"></span>Broad sector ETFs blend strong sub-industries with weak ones</li>
-          <li><span class="dot bad"></span>Whipsaws in choppy, range-bound markets</li>
-        </ul>
-      </div>
-    </div>
+  <div class="verdict">
+    <div class="box buy"><h3 id="buyTitle">Buy</h3><div class="chips" id="buyChips"></div><p class="note" id="buyNote"></p></div>
+    <div class="box avoid"><h3 id="avoidTitle">Avoid / sell</h3><div class="chips" id="avoidChips"></div><p class="note" id="avoidNote"></p></div>
+    <div class="box change"><h3>Rotation vs prior month</h3><div class="chips" id="changeChips"></div><p class="note" id="changeNote"></p></div>
   </div>
 
-  <div class="insight" id="insightBox"></div>
+  <section>
+    <div><h2 id="rankTitle">Sector ranking</h2><p class="sub" id="rankSub"></p></div>
+    <div class="scroll"><table id="rankTable"><thead><tr>
+      <th>Rank</th><th>Sector</th><th id="lbHead">Return</th><th class="barcell"></th><th>1M</th><th>vs SPY</th><th>Signal</th><th id="nextHead">Next month</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
 
-  <p class="section-title">How it works</p>
-  <div class="steps">
-    <div class="step"><div class="num">01</div><h4>Measure returns</h4><p>Calculate each sector's total return over the chosen lookback period vs the benchmark.</p></div>
-    <div class="step"><div class="num">02</div><h4>Rank all sectors</h4><p>Sort every sector from highest to lowest return. No subjective judgement needed.</p></div>
-    <div class="step"><div class="num">03</div><h4>Buy the leaders</h4><p>Allocate equal or momentum-scaled weight to the top-ranked sectors only.</p></div>
-    <div class="step"><div class="num">04</div><h4>Rebalance monthly</h4><p>At month-end, re-rank and swap out any sector that drops out of the top tier.</p></div>
-    <div class="step"><div class="num">05</div><h4>Cut the laggards</h4><p>Bottom-ranked sectors get zero allocation — momentum says avoid, regardless of valuation.</p></div>
-  </div>
+  <section>
+    <div><h2>Backtest: rotate every month</h2><p class="sub" id="btSub"></p></div>
+    <div class="stats" id="stats"></div>
+    <div class="chart"><div id="eqChart"></div>
+      <div class="legend">
+        <span style="--c:var(--up)" id="lgTop">Top basket</span>
+        <span style="--c:var(--down)" id="lgBot">Bottom basket</span>
+        <span style="--c:var(--spy)">SPY (S&amp;P 500)</span>
+        <span style="--c:var(--ew)">Equal-weight 11 sectors</span>
+      </div>
+    </div>
+  </section>
 
-  <p class="disclaimer" id="disclaimerText"></p>
+  <section class="heat">
+    <div><h2>Monthly return heatmap</h2><p class="sub">Calendar-month total returns. Solid outline marks that month's top 3, dashed marks the bottom 3.</p></div>
+    <div class="scroll"><table id="heat"></table></div>
+  </section>
 
+  <footer>
+    <p><strong>Method.</strong> Return = adjusted close at signal month-end ÷ adjusted close k months earlier − 1. Sectors are ranked high to low; the top N are bought equal-weight and held for the following calendar month, the bottom N are avoided (or sold if held). The middle sectors are a hold, not a new buy. The backtest ignores trading costs, taxes and slippage, and uses only months that are fully complete.</p>
+    <p><strong>Data.</strong> Yahoo Finance daily adjusted closes, Oct 2024 to 6 Oct 2026, snapshot taken 7 Oct 2026. October 2026 is month-to-date. This page does not refresh itself.</p>
+    <p>For education and research only. It is not investment advice, and past momentum does not guarantee future returns.</p>
+  </footer>
 </div>
 
 <script>
-const US_SECTORS = [
-  { name:"Information Technology",     ticker:"XLK",  ytd:33.14, oneYr:59.38, approxYtd:false },
-  { name:"Semiconductors",             ticker:"SOXX", ytd:89.0,  oneYr:189.70, approxYtd:true, sub:true },
-  { name:"Industrials",                ticker:"XLI",  ytd:16.95, oneYr:28.93, approxYtd:false },
-  { name:"Materials",                  ticker:"XLB",  ytd:14.75, oneYr:21.42, approxYtd:false },
-  { name:"Energy",                     ticker:"XLE",  ytd:21.05, oneYr:26.01, approxYtd:false },
-  { name:"Real Estate",                ticker:"XLRE", ytd:9.43,  oneYr:8.47,  approxYtd:false },
-  { name:"Consumer Staples",           ticker:"XLP",  ytd:7.84,  oneYr:6.43,  approxYtd:false },
-  { name:"Utilities",                  ticker:"XLU",  ytd:5.58,  oneYr:14.28, approxYtd:false },
-  { name:"Health Care",                ticker:"XLV",  ytd:-3.09, oneYr:14.13, approxYtd:false },
-  { name:"Consumer Discretionary",     ticker:"XLY",  ytd:-2.10, oneYr:12.29, approxYtd:true },
-  { name:"Financials",                 ticker:"XLF",  ytd:-1.69, oneYr:8.32,  approxYtd:false },
-  { name:"Communication Services",     ticker:"XLC",  ytd:-6.73, oneYr:7.09,  approxYtd:false }
-];
-const US_AS_OF = "Jun 18, 2026";
+const RAW={"SPY":[["2024-10-31",555.8134],["2024-11-29",588.9583],["2024-12-31",574.7879],["2025-01-31",590.2247],["2025-02-28",582.7318],["2025-03-31",550.2626],["2025-04-30",545.4916],["2025-05-30",579.773],["2025-06-30",609.5653],["2025-07-31",623.6046],["2025-08-29",636.4006],["2025-09-30",659.0695],["2025-10-31",674.78],["2025-11-28",676.0958],["2025-12-31",676.635],["2026-01-30",686.6071],["2026-02-27",680.6735],["2026-03-31",647.0621],["2026-04-30",715.0377],["2026-05-29",752.6671],["2026-06-30",744.9202],["2026-07-31",745.1796],["2026-08-31",765.15],["2026-09-30",762.63],["2026-10-06",779.09]],"XLK":[["2024-10-31",109.8552],["2024-11-29",115.5348],["2024-12-31",115.125],["2025-01-31",114.2783],["2025-02-28",111.6641],["2025-03-31",102.4116],["2025-04-30",104.1426],["2025-05-30",114.5286],["2025-06-30",125.8072],["2025-07-31",130.5319],["2025-08-29",130.3878],["2025-09-30",140.2108],["2025-10-31",149.5728],["2025-11-28",142.3797],["2025-12-31",143.4526],["2026-01-30",143.3629],["2026-02-27",138.2613],["2026-03-31",132.587],["2026-04-30",159.1243],["2026-05-29",190.5701],["2026-06-30",190.2979],["2026-07-31",175.1456],["2026-08-31",186.2826],["2026-09-30",195.75],["2026-10-06",202]],"XLF":[["2024-10-31",45.0957],["2024-11-29",49.811],["2024-12-31",47.0906],["2025-01-31",50.1501],["2025-02-28",50.8419],["2025-03-31",48.7089],["2025-04-30",47.6821],["2025-05-30",49.8335],["2025-06-30",51.3878],["2025-07-31",51.3878],["2025-08-29",52.9775],["2025-09-30",53.0337],["2025-10-31",51.557],["2025-11-28",52.5021],["2025-12-31",54.1082],["2026-01-30",52.7943],["2026-02-27",50.8086],["2026-03-31",49.0242],["2026-04-30",51.7648],["2026-05-29",51.2187],["2026-06-30",53.4209],["2026-07-31",56.7392],["2026-08-31",57.5065],["2026-09-30",53.4],["2026-10-06",54.01]],"XLV":[["2024-10-31",141.9211],["2024-11-29",142.4429],["2024-12-31",133.5364],["2025-01-31",142.5637],["2025-02-28",144.5633],["2025-03-31",142.2772],["2025-04-30",136.8789],["2025-05-30",129.2491],["2025-06-30",131.9711],["2025-07-31",127.7023],["2025-08-29",134.5559],["2025-09-30",136.8826],["2025-10-31",141.8792],["2025-11-28",155.0589],["2025-12-31",152.9041],["2026-01-30",152.8448],["2026-02-27",158.238],["2026-03-31",145.4097],["2026-04-30",144.7948],["2026-05-29",148.2463],["2026-06-30",158.0551],["2026-07-31",161.9303],["2026-08-31",169.8898],["2026-09-30",168.42],["2026-10-06",167.09]],"XLE":[["2024-10-31",41.6806],["2024-11-29",44.9458],["2024-12-31",40.6402],["2025-01-31",41.5796],["2025-02-28",43.1737],["2025-03-31",44.6818],["2025-04-30",38.49],["2025-05-30",38.9825],["2025-06-30",40.8806],["2025-07-31",42.0375],["2025-08-29",43.5703],["2025-09-30",43.4317],["2025-10-31",42.8434],["2025-11-28",43.9713],["2025-12-31",43.8411],["2026-01-30",50.0579],["2026-02-27",54.8333],["2026-03-31",60.462],["2026-04-30",58.873],["2026-05-29",55.5567],["2026-06-30",52.7962],["2026-07-31",59.1981],["2026-08-31",63.5821],["2026-09-30",61.5],["2026-10-06",63.75]],"XLI":[["2024-10-31",130.3151],["2024-11-29",140.2083],["2024-12-31",128.9451],["2025-01-31",135.3943],["2025-02-28",133.4174],["2025-03-31",128.6638],["2025-04-30",128.8111],["2025-05-30",140.1982],["2025-06-30",145.2526],["2025-07-31",149.6736],["2025-08-29",149.6736],["2025-09-30",152.4869],["2025-10-31",153.3075],["2025-11-28",151.953],["2025-12-31",153.8921],["2026-01-30",164.1304],["2026-02-27",175.7378],["2026-03-31",160.9006],["2026-04-30",173.6847],["2026-05-29",172.2422],["2026-06-30",184.7335],["2026-07-31",179.358],["2026-08-31",174.6606],["2026-09-30",166.98],["2026-10-06",171.58]],"XLY":[["2024-10-31",96.8141],["2024-11-29",109.3086],["2024-12-31",110.5257],["2025-01-31",114.3782],["2025-02-28",106.3924],["2025-03-31",97.5461],["2025-04-30",97.4473],["2025-05-30",105.6182],["2025-06-30",107.5903],["2025-07-31",109.62],["2025-08-29",114.724],["2025-09-30",118.8442],["2025-10-31",118.988],["2025-11-28",117.2671],["2025-12-31",118.6722],["2026-01-30",120.4214],["2026-02-27",116.138],["2026-03-31",108.5243],["2026-04-30",117.8551],["2026-05-29",120.3645],["2026-06-30",117.0223],["2026-07-31",115.8349],["2026-08-31",116.3338],["2026-09-30",108.84],["2026-10-06",111.72]],"XLP":[["2024-10-31",75.9393],["2024-11-29",78.8776],["2024-12-31",75.0735],["2025-01-31",75.4268],["2025-02-28",79.3424],["2025-03-31",78.4089],["2025-04-30",78.5626],["2025-05-30",79.5226],["2025-06-30",78.2702],["2025-07-31",77.1198],["2025-08-29",78.0865],["2025-09-30",76.2767],["2025-10-31",74.2425],["2025-11-28",77.25],["2025-12-31",76.2117],["2026-01-30",81.9315],["2026-02-27",88.3086],["2026-03-31",80.8831],["2026-04-30",83.182],["2026-05-29",81.8007],["2026-06-30",82.5272],["2026-07-31",84.4943],["2026-08-31",84.4248],["2026-09-30",80.6],["2026-10-06",81.8]],"XLU":[["2024-10-31",37.7385],["2024-11-29",39.1647],["2024-12-31",36.0417],["2025-01-31",37.0845],["2025-02-28",37.7226],["2025-03-31",37.8129],["2025-04-30",37.8369],["2025-05-30",39.2851],["2025-06-30",39.4323],["2025-07-31",41.3687],["2025-08-29",40.7168],["2025-09-30",42.3958],["2025-10-31",43.3146],["2025-11-28",44.0584],["2025-12-31",41.8171],["2026-01-30",42.3657],["2026-02-27",46.7541],["2026-03-31",45.266],["2026-04-30",46.2129],["2026-05-29",43.816],["2026-06-30",45.0091],["2026-07-31",44.0263],["2026-08-31",41.9218],["2026-09-30",39.44],["2026-10-06",41.16]],"XLB":[["2024-10-31",44.9682],["2024-11-29",45.6375],["2024-12-31",40.7255],["2025-01-31",42.9762],["2025-02-28",42.9617],["2025-03-31",41.8145],["2025-04-30",40.798],["2025-05-30",41.9895],["2025-06-30",42.922],["2025-07-31",42.8829],["2025-08-29",45.1069],["2025-09-30",44.0146],["2025-10-31",42.0747],["2025-11-28",43.9066],["2025-12-31",44.775],["2026-01-30",48.6453],["2026-02-27",52.7328],["2026-03-31",49.5558],["2026-04-30",51.0434],["2026-05-29",50.726],["2026-06-30",50.5972],["2026-07-31",50.199],["2026-08-31",52.4486],["2026-09-30",48.7],["2026-10-06",49.73]],"XLRE":[["2024-10-31",40.3455],["2024-11-29",42.0265],["2024-12-31",38.3911],["2025-01-31",39.0991],["2025-02-28",40.7322],["2025-03-31",39.7579],["2025-04-30",39.2354],["2025-05-30",39.6439],["2025-06-30",39.7053],["2025-07-31",39.6957],["2025-08-29",40.5585],["2025-09-30",40.6942],["2025-10-31",39.5061],["2025-11-28",40.2498],["2025-12-31",39.4008],["2026-01-30",40.4554],["2026-02-27",42.8087],["2026-03-31",40.1375],["2026-04-30",43.6469],["2026-05-29",43.2439],["2026-06-30",43.6625],["2026-07-31",44.6938],["2026-08-31",43.7418],["2026-09-30",40.91],["2026-10-06",41.1]],"XLC":[["2024-10-31",89.8786],["2024-11-29",96.0892],["2024-12-31",94.7823],["2025-01-31",100.2356],["2025-02-28",99.8636],["2025-03-31",94.7093],["2025-04-30",93.7175],["2025-05-30",99.57],["2025-06-30",106.83],["2025-07-31",105.7275],["2025-08-29",109.6452],["2025-09-30",116.9222],["2025-10-31",113.4057],["2025-11-28",113.9786],["2025-12-31",116.6566],["2026-01-30",118.9953],["2026-02-27",116.9836],["2026-03-31",110.2091],["2026-04-30",115.826],["2026-05-29",115.0108],["2026-06-30",106.7781],["2026-07-31",107.8844],["2026-08-31",111.0939],["2026-09-30",110.97],["2026-10-06",111.65]]};
+const NAMES={XLK:"Technology",XLF:"Financials",XLV:"Health Care",XLE:"Energy",XLI:"Industrials",XLY:"Consumer Discretionary",XLP:"Consumer Staples",XLU:"Utilities",XLB:"Materials",XLRE:"Real Estate",XLC:"Communication Services"};
+const SECT=Object.keys(NAMES);
+const DATES=RAW.SPY.map(r=>r[0]);
+const N=DATES.length, LAST=N-1;                 // LAST = month-to-date point
+const P=t=>RAW[t].map(r=>r[1]);
+const PX={}; for(const t of ["SPY",...SECT]) PX[t]=P(t);
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const mLabel=(i,long)=>{const [y,m]=DATES[i].split("-");return (long?["January","February","March","April","May","June","July","August","September","October","November","December"][+m-1]:MON[+m-1])+" "+(long?y:y.slice(2))};
+const ret=(t,i,k)=>PX[t][i]/PX[t][i-k]-1;
+const fmt=(x,d=1)=>(x>=0?"+":"−")+Math.abs(x*100).toFixed(d)+"%";
+const cls=x=>x>=0?"pos":"neg";
 
-const MY_SECTORS_MONTHLY = {
-  "Technology":            [1.2,-0.8,2.1,3.4,-1.0,4.2,2.8,5.1,3.0,2.2,4.6,5.4],
-  "Construction":          [2.0,1.1,-0.5,1.8,2.4,1.0,3.2,2.1,2.9,3.5,2.7,4.1],
-  "Industrial Products":   [0.8,1.4,0.6,2.0,1.1,1.6,2.4,1.9,2.6,2.0,3.1,3.6],
-  "Financial Services":    [0.5,0.9,1.0,0.4,1.3,0.7,1.1,1.5,1.8,1.2,2.0,2.1],
-  "Properties":            [1.0,0.6,-1.2,0.8,1.5,0.4,0.9,1.7,2.1,1.0,1.6,2.0],
-  "Energy":                [-0.4,1.8,2.2,-1.5,0.9,1.4,-0.6,2.0,0.8,1.1,0.6,0.9],
-  "Consumer Discretionary":[0.3,0.5,0.2,0.9,-0.3,1.0,0.6,0.8,0.4,0.5,0.7,0.4],
-  "Consumer Staples":      [0.2,-0.1,0.3,0.1,-0.4,0.2,-0.2,0.3,-0.1,0.2,-0.3,-0.2],
-  "REITs":                 [-0.3,-0.6,0.4,-0.8,0.2,-0.5,-0.4,0.1,-0.9,-0.3,-0.6,-0.7],
-  "Healthcare":             [0.6,-0.4,-0.7,0.3,-0.9,-0.2,-1.0,-0.3,-0.8,-0.6,-1.1,-1.2],
-  "Plantation":             [-1.0,-1.4,-0.6,-1.8,-0.9,-1.5,-2.0,-1.2,-1.6,-1.9,-2.1,-2.0],
-  "Utilities":              [-0.5,-1.1,-1.6,-0.8,-1.9,-1.3,-1.8,-2.0,-1.7,-2.2,-2.4,-2.6],
-  "Telecommunications":     [0.1,0.4,-0.2,0.6,0.0,0.3,0.5,-0.1,0.2,0.4,0.1,0.3]
-};
+const state={month:LAST-1,k:1,n:3};
+document.getElementById("asof").textContent=new Date(DATES[LAST]+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
 
-const LOOKBACKS = [
-  {key:"YTD", label:"YTD"},
-  {key:"1Y",  label:"1-Year"}
-];
+function rankAt(i,k){return SECT.filter(()=>i-k>=0).map(t=>({t,r:ret(t,i,k)})).sort((a,b)=>b.r-a.r)}
 
-let state = { market:"US", lookback:"YTD", tier:3 };
+// controls
+const mSel=document.getElementById("month");
+function fillMonths(){mSel.innerHTML="";for(let i=LAST-1;i>=state.k;i--){const o=document.createElement("option");o.value=i;o.textContent=mLabel(i,true)+(i===LAST-1?" (latest)":"");mSel.appendChild(o)}
+  if(state.month<state.k)state.month=LAST-1; mSel.value=state.month;}
+mSel.addEventListener("change",()=>{state.month=+mSel.value;render()});
+function seg(id,opts,key,suffix){const el=document.getElementById(id);el.innerHTML="";opts.forEach(v=>{const b=document.createElement("button");b.type="button";b.textContent=v+suffix;b.setAttribute("aria-pressed",state[key]===v);b.addEventListener("click",()=>{state[key]=v;if(key==="k")fillMonths();buildSegs();render()});el.appendChild(b)})}
+function buildSegs(){seg("lookback",[1,3,6,12],"k","M");seg("basket",[2,3,4],"n","")}
 
-function cumReturnFromMonthly(arr, months){
-  const slice = arr.slice(arr.length - months);
-  let f = 1;
-  slice.forEach(r => f *= (1+r/100));
-  return (f-1)*100;
+function chip(t,r,c){return `<span class="chip ${c}"><b>${t}</b><span>${NAMES[t]}</span><b class="num ${cls(r)}">${fmt(r)}</b></span>`}
+
+function render(){
+  const {month:i,k,n}=state;
+  const R=rankAt(i,k), top=R.slice(0,n).map(x=>x.t), bot=R.slice(-n).map(x=>x.t);
+  const nextLbl=mLabel(i+1,true)+(i+1===LAST?" (month to date)":"");
+  const lbTxt=k===1?"monthly return":`${k}-month return`;
+  document.getElementById("buyTitle").textContent=`Buy · top ${n}`;
+  document.getElementById("avoidTitle").textContent=`Avoid / sell · bottom ${n}`;
+  document.getElementById("buyChips").innerHTML=R.slice(0,n).map(x=>chip(x.t,x.r,"buy")).join("");
+  document.getElementById("avoidChips").innerHTML=R.slice(-n).reverse().map(x=>chip(x.t,x.r,"avoid")).join("");
+  document.getElementById("buyNote").textContent=`Equal-weight, ${(100/n).toFixed(n===3?1:0)}% each, held through ${nextLbl}.`;
+  document.getElementById("avoidNote").textContent=`Weakest ${lbTxt} to ${mLabel(i,true)}. Sell if currently held.`;
+  // rotation vs prior month
+  const cc=document.getElementById("changeChips"), cn=document.getElementById("changeNote");
+  if(i-1-k>=0){const prevTop=rankAt(i-1,k).slice(0,n).map(x=>x.t);
+    const ins=top.filter(t=>!prevTop.includes(t)), outs=prevTop.filter(t=>!top.includes(t));
+    cc.innerHTML=ins.map(t=>`<span class="chip buy"><b>+ ${t}</b><span>enter</span></span>`).join("")+outs.map(t=>`<span class="chip avoid"><b>− ${t}</b><span>exit</span></span>`).join("");
+    if(!ins.length){cc.innerHTML="";cn.textContent=`No change. Keep ${prevTop.join(", ")}.`}
+    else cn.textContent=`${ins.length} of ${n} positions change from the ${mLabel(i-1,true)} basket (${prevTop.join(", ")}).`;
+  } else {cc.innerHTML="";cn.textContent="No earlier signal month available for this lookback."}
+
+  // table
+  document.getElementById("rankTitle").textContent=`Sector ranking at ${mLabel(i,true)} month-end`;
+  document.getElementById("rankSub").textContent=`Ranked by ${lbTxt}. The final column shows what each sector actually did in ${nextLbl}, the holding period.`;
+  document.getElementById("lbHead").textContent=k===1?"Month return":`${k}M return`;
+  document.getElementById("nextHead").textContent=mLabel(i+1)+(i+1===LAST?" MTD":"");
+  const spyR=ret("SPY",i,k), maxAbs=Math.max(...R.map(x=>Math.abs(x.r)),0.01);
+  document.querySelector("#rankTable tbody").innerHTML=R.map((x,j)=>{
+    const sig=j<n?"BUY":j>=R.length-n?"AVOID":"HOLD";
+    const w=Math.abs(x.r)/maxAbs*50, nx=ret(x.t,i+1,1), r1=ret(x.t,i,1);
+    const bar=`<div class="bar" aria-hidden="true"><i style="${x.r>=0?`left:50%;width:${w}%;background:var(--up)`:`right:50%;width:${w}%;background:var(--down)`}"></i></div>`;
+    return `<tr class="${sig}"><td class="rank">${j+1}</td><td class="sector">${NAMES[x.t]}<small>${x.t}</small></td><td class="num ${cls(x.r)}">${fmt(x.r,2)}</td><td class="barcell">${bar}</td><td class="num ${cls(r1)}">${fmt(r1)}</td><td class="num ${cls(x.r-spyR)}">${fmt(x.r-spyR)}</td><td><span class="pill ${sig}">${sig}</span></td><td class="num ${cls(nx)}">${fmt(nx)}</td></tr>`}).join("")
+   +`<tr><td class="rank">–</td><td class="sector">S&amp;P 500 benchmark<small>SPY</small></td><td class="num ${cls(spyR)}">${fmt(spyR,2)}</td><td></td><td class="num ${cls(ret("SPY",i,1))}">${fmt(ret("SPY",i,1))}</td><td class="num">—</td><td></td><td class="num ${cls(ret("SPY",i+1,1))}">${fmt(ret("SPY",i+1,1))}</td></tr>`;
+  backtest(); heat();
 }
 
-function getRows(){
-  if (state.market === "US"){
-    return US_SECTORS.map(s => ({
-      name:s.name, ret: state.lookback==="YTD" ? s.ytd : s.oneYr,
-      approx: state.lookback==="YTD" ? s.approxYtd : false,
-      sub: !!s.sub, ticker: s.ticker
-    }));
-  } else {
-    const months = state.lookback==="YTD" ? 6 : 12;
-    return Object.entries(MY_SECTORS_MONTHLY).map(([name, arr]) => ({
-      name, ret: cumReturnFromMonthly(arr, months), approx:false, sub:false
-    }));
+function backtest(){
+  const {k,n}=state, start=k, end=LAST-2; // signal months with a complete next month
+  const lines={top:[1],bot:[1],spy:[1],ew:[1]}, dates=[start]; let wins=0,turn=0,prev=null,months=0;
+  for(let i=start;i<=end;i++){
+    const R=rankAt(i,k), top=R.slice(0,n).map(x=>x.t), bot=R.slice(-n).map(x=>x.t);
+    const avg=a=>a.reduce((s,t)=>s+ret(t,i+1,1),0)/a.length;
+    const rt=avg(top), rb=avg(bot), rs=ret("SPY",i+1,1), re=avg(SECT);
+    lines.top.push(lines.top.at(-1)*(1+rt)); lines.bot.push(lines.bot.at(-1)*(1+rb));
+    lines.spy.push(lines.spy.at(-1)*(1+rs)); lines.ew.push(lines.ew.at(-1)*(1+re));
+    if(rt>rs)wins++; if(prev)turn+=top.filter(t=>!prev.includes(t)).length/n; prev=top; months++; dates.push(i+1);
   }
+  const tot=a=>a.at(-1)-1, ann=a=>Math.pow(a.at(-1),12/months)-1;
+  const mdd=a=>{let pk=a[0],dd=0;for(const v of a){pk=Math.max(pk,v);dd=Math.min(dd,v/pk-1)}return dd};
+  document.getElementById("btSub").textContent=`Signals from ${mLabel(start,true)} to ${mLabel(end,true)}, held one month each: ${months} rebalances, ending ${mLabel(end+1,true)}. October 2026 is excluded because it is not complete. Short window, so treat this as an illustration rather than proof.`;
+  document.getElementById("lgTop").textContent=`Top ${n} basket`; document.getElementById("lgBot").textContent=`Bottom ${n} basket`;
+  const S=(kk,v,s="")=>`<div class="stat"><span class="k">${kk}</span><span class="v">${v}${s?` <small>${s}</small>`:""}</span></div>`;
+  document.getElementById("stats").innerHTML=
+    S(`Top ${n} total`,`<span class="${cls(tot(lines.top))}">${fmt(tot(lines.top))}</span>`,`${fmt(ann(lines.top))} ann.`)+
+    S("SPY total",`<span class="${cls(tot(lines.spy))}">${fmt(tot(lines.spy))}</span>`,`${fmt(ann(lines.spy))} ann.`)+
+    S(`Bottom ${n} total`,`<span class="${cls(tot(lines.bot))}">${fmt(tot(lines.bot))}</span>`)+
+    S("Beat SPY",`${wins}/${months}`,`${Math.round(wins/months*100)}% of months`)+
+    S("Max drawdown",`<span class="neg">${fmt(mdd(lines.top))}</span>`,`SPY ${fmt(mdd(lines.spy))}`)+
+    S("Avg turnover",`${Math.round(turn/Math.max(months-1,1)*100)}%`,"of basket / month");
+  drawChart(lines,dates);
 }
 
-function fmt(n){ return (n>0?"+":"") + n.toFixed(1) + "%"; }
-
-function renderControls(){
-  const marketPills = document.getElementById("marketPills");
-  marketPills.innerHTML = "";
-  [["US","United States"],["MY","Malaysia (Bursa)"]].forEach(([key,label])=>{
-    const b = document.createElement("button");
-    b.className = "pill" + (state.market===key ? " active" : "");
-    b.textContent = label;
-    b.onclick = () => { state.market = key; renderAll(); };
-    marketPills.appendChild(b);
-  });
-
-  const lbPills = document.getElementById("lookbackPills");
-  lbPills.innerHTML = "";
-  LOOKBACKS.forEach(lb=>{
-    const b = document.createElement("button");
-    b.className = "pill alt" + (state.lookback===lb.key ? " active alt" : "");
-    b.textContent = lb.label;
-    b.onclick = () => { state.lookback = lb.key; renderAll(); };
-    lbPills.appendChild(b);
-  });
-
-  const tierPills = document.getElementById("tierPills");
-  tierPills.innerHTML = "";
-  [2,3,4].forEach(t=>{
-    const b = document.createElement("button");
-    b.className = "pill" + (state.tier===t ? " active" : "");
-    b.textContent = "Top " + t;
-    b.onclick = () => { state.tier = t; renderAll(); };
-    tierPills.appendChild(b);
-  });
-
-  document.getElementById("ctrlNote").textContent =
-    "Buy = top " + state.tier + " sectors · Avoid = bottom " + state.tier + " · rest held neutral.";
+function drawChart(L,dates){
+  const W=760,H=300,ml=48,mr=16,mt=14,mb=30,iw=W-ml-mr,ih=H-mt-mb;
+  const all=[...L.top,...L.bot,...L.spy,...L.ew], lo=Math.min(...all), hi=Math.max(...all);
+  const step=(hi-lo)>0.6?0.2:(hi-lo)>0.25?0.1:0.05;
+  const y0=Math.floor(lo/step)*step, y1=Math.ceil(hi/step)*step;
+  const x=j=>ml+iw*j/(dates.length-1), y=v=>mt+ih*(1-(v-y0)/(y1-y0));
+  let g="";
+  for(let v=y0;v<=y1+1e-9;v+=step){g+=`<line x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--f-mono)">${Math.round(v*100)}</text>`}
+  const every=Math.ceil(dates.length/8);
+  dates.forEach((d,j)=>{if(j%every===0||j===dates.length-1)g+=`<text x="${x(j)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--f-mono)">${mLabel(d)}</text>`});
+  const path=(a,c,w,dash)=>`<path d="${a.map((v,j)=>(j?"L":"M")+x(j).toFixed(1)+" "+y(v).toFixed(1)).join("")}" fill="none" stroke="${c}" stroke-width="${w}" ${dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round"/><circle cx="${x(a.length-1)}" cy="${y(a.at(-1))}" r="3.5" fill="${c}"/>`;
+  g+=`<line x1="${ml}" x2="${W-mr}" y1="${y(1)}" y2="${y(1)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"/>`;
+  g+=path(L.ew,"var(--ew)",1.6,true)+path(L.bot,"var(--down)",1.8)+path(L.spy,"var(--spy)",2)+path(L.top,"var(--up)",2.6);
+  document.getElementById("eqChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Growth of 100 for each strategy">${g}<text x="${ml}" y="${mt-2}" font-size="10" fill="var(--muted)" font-family="var(--f-mono)">Growth of 100</text></svg>`;
 }
 
-function renderTable(){
-  const rows = getRows().sort((a,b)=>b.ret-a.ret);
-  const n = rows.length;
-  const tier = state.tier;
-  const maxAbs = Math.max(...rows.map(r=>Math.abs(r.ret)), 1);
-
-  document.getElementById("rankingTitle").textContent =
-    state.market==="US" ? "US — GICS Sector ETFs" : "Malaysia — Bursa Sectors";
-  document.getElementById("rankingMeta").textContent =
-    state.lookback==="YTD" ? "Year-to-date total return" : "Trailing 1-year total return";
-
-  const badge = document.getElementById("dataBadge");
-  if (state.market === "US"){
-    badge.className = "data-badge real";
-    badge.innerHTML = '<span class="dotb"></span> Real ETF data';
-  } else {
-    badge.className = "data-badge sim";
-    badge.innerHTML = '<span class="dotb"></span> Illustrative sample data';
+function heat(){
+  const cols=[]; for(let i=Math.max(1,LAST-12);i<=LAST;i++)cols.push(i);
+  let h=`<thead><tr><th>Sector</th>${cols.map(i=>`<th>${mLabel(i)}${i===LAST?"*":""}</th>`).join("")}</tr></thead><tbody>`;
+  const ranks={}; cols.forEach(i=>{ranks[i]=rankAt(i,1).map(x=>x.t)});
+  for(const t of [...SECT,"SPY"]){
+    h+=`<tr><td>${t==="SPY"?"<strong>SPY</strong>":t} <span style="color:var(--muted)">${t==="SPY"?"":NAMES[t].split(" ")[0]}</span></td>`;
+    cols.forEach(i=>{const r=ret(t,i,1), p=Math.min(Math.abs(r)/0.08,1)*55;
+      const c=t==="SPY"?"":(ranks[i].indexOf(t)<3?"top":ranks[i].indexOf(t)>=8?"bot":"");
+      h+=`<td class="cell ${c}" style="background:color-mix(in oklab, ${r>=0?"var(--up)":"var(--down)"} ${p.toFixed(0)}%, var(--surface))">${(r*100).toFixed(1)}</td>`});
+    h+="</tr>";
   }
-
-  const body = document.getElementById("rankBody");
-  body.innerHTML = "";
-
-  rows.forEach((r,i)=>{
-    const rank = i+1;
-    let cls = "hold", tag = "HOLD";
-    if (rank <= tier){ cls="buy"; tag="BUY"; }
-    else if (rank > n-tier){ cls="avoid"; tag="AVOID"; }
-    if (r.sub) cls += " semis";
-
-    const pct = Math.min(Math.abs(r.ret)/maxAbs*100, 100);
-    const tickerSpan = r.ticker ? ' <span style="color:var(--ink-soft);font-family:\'IBM Plex Mono\',monospace;font-size:11px;">(' + r.ticker + ')</span>' : "";
-    const subSpan = r.sub ? '<span class="sub-flag">SUB-INDUSTRY</span>' : "";
-    const approxSpan = r.approx ? '<span class="approx-flag">~approx.</span>' : "";
-
-    const tr = document.createElement("tr");
-    tr.className = cls;
-    tr.innerHTML =
-      '<td><span class="rank-badge">' + rank + '</span></td>' +
-      '<td><span class="sector-name">' + r.name + tickerSpan + '</span>' + subSpan + approxSpan + '</td>' +
-      '<td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
-      '<td class="ret-cell">' + fmt(r.ret) + '</td>' +
-      '<td><span class="tag">' + tag + '</span></td>';
-    body.appendChild(tr);
-  });
-
-  document.getElementById("sourceNote").textContent =
-    state.market==="US"
-      ? 'Source: SPDR Select Sector ETF total returns (dividends reinvested), as of ' + US_AS_OF + '. "~approx." = not pulled from the identical same-day source as the rest of the table.'
-      : 'Sample data generated for demonstration only — not Bursa Malaysia sector index data.';
+  document.getElementById("heat").innerHTML=h+`</tbody><caption style="caption-side:bottom;text-align:left;padding:8px 10px;color:var(--muted);font-size:.8rem">* Month to date, through ${mLabel(LAST)}. Values in %.</caption>`;
 }
 
-function renderCallout(){
-  const box = document.getElementById("chipCallout");
-  if (state.market === "US"){
-    box.innerHTML =
-      '<h3>Where did the chip rally go?</h3>' +
-      '<p>Nvidia, AMD, Intel and Micron sit inside <b>Information Technology (XLK)</b> — but blended with Apple, Microsoft and others, which dilutes the move.</p>' +
-      '<p>The <b>Semiconductors (SOXX)</b> row above isolates that sub-industry directly. It is up <b>+189.7%</b> over the trailing year vs <b>+59.4%</b> for broad Tech — that gap <i>is</i> the chip rally.</p>';
-  } else {
-    box.innerHTML =
-      '<h3>About this data</h3>' +
-      '<p>Malaysia\'s sector figures here are <b>illustrative sample data</b>, not a live Bursa feed. Switch to the US tab to see real Select Sector SPDR ETF returns.</p>' +
-      '<p>Want this rebuilt with real Bursa sector index data? Share the figures (or a source) and it can be wired in the same way.</p>';
-  }
-}
-
-function renderInsight(){
-  const rows = getRows().sort((a,b)=>b.ret-a.ret);
-  const tier = state.tier;
-  const top = rows.slice(0, tier);
-  const avgTop = top.reduce((s,r)=>s+r.ret,0)/top.length;
-  const avgAll = rows.reduce((s,r)=>s+r.ret,0)/rows.length;
-  const spread = avgTop-avgAll;
-  const names = top.map(r=>r.name).join(", ");
-  const periodLabel = state.lookback==="YTD" ? "year-to-date" : "trailing 1-year";
-
-  document.getElementById("insightBox").innerHTML =
-    '<span class="ilabel">Computed insight</span>' +
-    '<p>Over this ' + periodLabel + ' period, the top ' + tier + ' sectors (<b>' + names + '</b>) averaged <b>' + fmt(avgTop) + '</b> ' +
-    'vs an all-sector average of <b>' + fmt(avgAll) + '</b> — a momentum spread of <b>' + fmt(spread) + '</b>.</p>';
-}
-
-function renderDisclaimer(){
-  document.getElementById("disclaimerText").innerHTML =
-    state.market==="US"
-      ? 'US figures are real Select Sector SPDR ETF total returns as of ' + US_AS_OF + ' — but markets move daily, so re-check current levels before acting. Sector ETFs are cap-weighted and can be dominated by a few mega-cap names; the Semiconductors row exists precisely to show what a broad sector figure can hide. Not financial advice.'
-      : 'Malaysia figures are representative sample data for demonstrating the mechanics of the strategy — not a live Bursa Malaysia feed. Verify with actual Bursa sector index data before making any allocation decision. Not financial advice.';
-}
-
-function renderAll(){
-  renderControls();
-  renderTable();
-  renderCallout();
-  renderInsight();
-  renderDisclaimer();
-}
-
-renderAll();
+buildSegs(); fillMonths(); render();
 </script>
-
 </body>
 </html>
