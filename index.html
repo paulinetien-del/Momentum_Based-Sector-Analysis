@@ -10,18 +10,13 @@
 <style>
 /* Layout: a trading-desk worksheet — control strip, verdict, ranking ledger, then evidence (backtest, heatmap). */
 :root{
-  --bg:#f3f5f7; --surface:#ffffff; --ink:#14212b; --muted:#5b6b78; --line:#d9e0e6;
+  color-scheme:light;
+  --bg:#ffffff; --surface:#ffffff; --tint:#f3f5f8; --ink:#14212b; --muted:#5b6b78; --line:#d9e0e6;
   --accent:#1f5f8b; --up:#13814f; --down:#c2412f; --hold:#8a96a1; --spy:#8a6d1f; --ew:#7a5aa8;
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
   --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0f161c; --surface:#16212a; --ink:#e4ebf0; --muted:#93a3b0; --line:#2a3945;
-  --accent:#6fb3e0; --up:#3fbf7f; --down:#ef7a66; --hold:#7d8b96; --spy:#d4b05a; --ew:#b394e0; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0f161c; --surface:#16212a; --ink:#e4ebf0; --muted:#93a3b0; --line:#2a3945;
-  --accent:#6fb3e0; --up:#3fbf7f; --down:#ef7a66; --hold:#7d8b96; --spy:#d4b05a; --ew:#b394e0; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:20px 48px}
 .wrap{max-width:1080px;margin:0 auto;display:grid;gap:28px}
@@ -36,9 +31,9 @@ header{display:grid;gap:6px}
 .controls{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:end;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
 .ctl{display:grid;gap:6px}
 .ctl label,.ctl .lbl{font:600 .7rem/1 var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+select{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--tint);color:var(--ink)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.seg button{font:600 .85rem var(--f-mono);padding:7px 12px;border:0;background:var(--bg);color:var(--muted);cursor:pointer}
+.seg button{font:600 .85rem var(--f-mono);padding:7px 12px;border:0;background:var(--tint);color:var(--muted);cursor:pointer}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
 button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -48,7 +43,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
 .box h3{margin:0;font:700 .78rem/1 var(--f-mono);text-transform:uppercase;letter-spacing:.1em}
 .box.buy h3{color:var(--up)} .box.avoid h3{color:var(--down)} .box.change h3{color:var(--accent)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;gap:8px;align-items:baseline;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.chip{display:inline-flex;gap:8px;align-items:baseline;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--tint)}
 .chip b{font-family:var(--f-mono);font-size:.9rem}
 .chip span{font-size:.85rem;color:var(--muted)}
 .chip.buy{border-color:color-mix(in oklab,var(--up) 45%,var(--line))}
